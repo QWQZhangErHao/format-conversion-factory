@@ -49,9 +49,11 @@ function addLog(level: LogEntry['level'], message: string, source: LogEntry['sou
 }
 
 // Safe console bridge — 不覆盖全局 console，提供显式接桥
+// eslint-disable-next-line no-console
 const originalConsoleLog = console.log.bind(console)
 export function setupConsoleBridge(onLog: (level: string, msg: string) => void) {
   let isIntercepting = false
+  // eslint-disable-next-line no-console
   console.log = (...args: unknown[]) => {
     originalConsoleLog(...args)
     if (isIntercepting) return
