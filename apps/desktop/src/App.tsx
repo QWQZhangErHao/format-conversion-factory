@@ -12,12 +12,12 @@ import { universalConvert } from '../../../packages/core/src/universal-converter
 import { DiffPreview } from './DiffPreview'
 import { ConversionErrorBoundary } from './ConversionErrorBoundary'
 import { SpringCheckmark } from './SpringCheckmark'
-import { LogViewer, logInfo, logWarn, logError } from './LogViewer'
+import { LogViewer, logInfo, logWarn } from './LogViewer'
 import { TitleBar } from './TitleBar'
 import { FormatSelector } from './FormatSelector'
 import { SettingsPanel } from './SettingsPanel'
 import { QueueStatusBar } from './QueueStatusBar'
-import { FORMAT_REGISTRY, FORMAT_BY_TAB, detectFormat, getFormatName, type FormatTab } from './format-registry'
+import { detectFormat, getFormatName, type FormatTab } from './format-registry'
 
 function formatFileSize(bytes: number): string {
   const units = ['B', 'KB', 'MB', 'GB']
@@ -59,20 +59,6 @@ async function readFileContent(file: File): Promise<string> {
   })
 }
 
-// 二进制格式列表（不可用 readAsText 读取）
-const BINARY_FORMATS = new Set(['pdf', 'docx', 'pptx', 'xlsx', 'png', 'jpeg', 'webp', 'gif', 'ico', 'bmp', 'tiff', 'avif', 'heic', 'epub', 'rtf'])
-
-/** 检测 Tauri 运行时是否可用 */
-async function checkTauriAvailable(): Promise<boolean> {
-  try {
-    const { invoke } = await import('@tauri-apps/api/core')
-    await invoke('greet', { name: 'test' })
-    return true
-  } catch {
-    return false
-  }
-}
-
 /** 通过 Tauri 后端转换文件（用于非浏览器可转换的格式） */
 async function tryTauriConvert(
   file: File,
@@ -81,14 +67,14 @@ async function tryTauriConvert(
 ): Promise<string | undefined> {
   // 路径穿越防护：只允许字母、数字、连字符、下划线
   function safeName(s: string): string {
-    return s.replace(/[^a-zA-Z0-9_-]/g, '_')
+    return s.replace(/[^a-zA-Z0-9_-]/g, '_') || 'unknown'
   }
 
   let inputPath = ''
   let outputPath = ''
   try {
     const { invoke } = await import('@tauri-apps/api/core')
-    const { writeTextFile, readTextFile, remove: fsRemove } = await import('@tauri-apps/plugin-fs')
+    const { writeTextFile, readTextFile } = await import('@tauri-apps/plugin-fs')
     const { tempDir } = await import('@tauri-apps/api/path')
 
     const tmpDir = await tempDir()
@@ -151,7 +137,7 @@ async function extractDocxText(file: File): Promise<string> {
   let i = 0
   let scanCount = 0
   const MAX_SCAN = 10000  // 最多扫描 10000 个条目，防 ZIP 炸弹
-  const entries: Array<{ name: string; compMethod: number; compSize: number; uncompSize: number; offset: number }> = []
+  const entries: { name: string; compMethod: number; compSize: number; uncompSize: number; offset: number }[] = []
 
   // 扫描本地文件头 (PK\03\04)
   while (i < bytes.length - 30 && scanCount < MAX_SCAN) {
@@ -511,7 +497,7 @@ function App() {
         isDark={false}
         onToggleLogs={() => { logInfo(`日志面板: ${showLogs ? '关闭' : '打开'}`); setShowLogs(!showLogs) }}
         onToggleSettings={() => { logInfo(`设置面板: ${showSettings ? '关闭' : '打开'}`); setShowSettings(!showSettings) }}
-        onToggleDark={() => {}}
+        onToggleDark={() => { /* 暗色模式由 isDark state 控制 */ }}
       />
 
       <div className="mx-auto max-w-5xl px-6 pb-16">

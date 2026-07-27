@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion'
 
 const winctl = {
-  minimize: async () => { try { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().minimize() } catch {} },
-  toggleMaximize: async () => { try { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().toggleMaximize() } catch {} },
-  close: async () => { try { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().close() } catch {} },
+  minimize: async () => { try { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().minimize() } catch { /* 非 Tauri 环境静默降级 */ } },
+  toggleMaximize: async () => { try { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().toggleMaximize() } catch { /* 非 Tauri 环境静默降级 */ } },
+  close: async () => { try { const { getCurrentWindow } = await import('@tauri-apps/api/window'); await getCurrentWindow().close() } catch { /* 非 Tauri 环境静默降级 */ } },
 }
 
 interface TitleBarProps {

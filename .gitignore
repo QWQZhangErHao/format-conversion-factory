@@ -13,5 +13,7 @@ coverage/
 .vite/
 *.bak
 *.minimal
+*.d.ts.map
+*.js.map
 test-files/
 !test-files/.gitkeep

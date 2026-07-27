@@ -33,7 +33,7 @@ export class ConversionErrorBoundary extends Component<Props, State> {
     return { hasError: true, error }
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
     if (!this.props.silent) {
       console.error('[ErrorBoundary] 捕获渲染异常:', error.message)
     }

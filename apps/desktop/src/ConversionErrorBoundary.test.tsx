@@ -50,7 +50,7 @@ describe('ConversionErrorBoundary', () => {
   })
 
   it('reset button exists and is clickable', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.spyOn(console, 'error').mockImplementation(() => { /* 静默测试错误 */ })
     const ThrowingComponent = () => { throw new Error('err') }
     render(
       <ConversionErrorBoundary>

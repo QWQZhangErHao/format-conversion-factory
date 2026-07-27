@@ -54,8 +54,6 @@ export function SafeDiffPreview({ original, converted, sourceFormat, targetForma
   const origLines = useMemo(() => original.split('\n'), [original])
   const convLines = useMemo(() => converted.split('\n'), [converted])
 
-  // 简单行数差异比较
-  const maxLines = Math.max(origLines.length, convLines.length)
   const lineDiff = origLines.length - convLines.length
 
   return (

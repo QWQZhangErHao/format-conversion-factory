@@ -5,7 +5,7 @@
  * 支持日志级别过滤、搜索、导出。
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SPRING } from '../../../packages/ui-shared/src'
 
@@ -24,7 +24,7 @@ const MAX_LOG_DEPTH = 3
 let logId = 0
 let logDepth = 0
 const frontendLogs: LogEntry[] = []
-let logListeners: Array<() => void> = []
+let logListeners: (() => void)[] = []
 
 function addLog(level: LogEntry['level'], message: string, source: LogEntry['source'] = 'frontend') {
   // 递归深度保护 — 防止 console.log 拦截引发无限递归
@@ -71,7 +71,7 @@ interface LogViewerProps {
   onClose: () => void
 }
 
-export function LogViewer({ visible, onClose }: LogViewerProps) {
+export function LogViewer({ visible, onClose: _onClose }: LogViewerProps) {
   const [logs, setLogs] = useState<LogEntry[]>([])
   const [filter, setFilter] = useState<LogEntry['level'] | 'ALL'>('ALL')
   const [search, setSearch] = useState('')
