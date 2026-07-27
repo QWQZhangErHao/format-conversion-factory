@@ -37,8 +37,8 @@ class FormatRegistry {
     // 此方法仅检查格式是否已被注册，不保证有对应的转换器
     const bothExist = this.formats.has(source) && this.formats.has(target)
     if (!bothExist) return false
-    // 同一格式不需要转换
-    if (source === target) return false
+    // 同一格式无需转换，但视为可转换（自身兼容）
+    if (source === target) return true
     return true
   }
 
