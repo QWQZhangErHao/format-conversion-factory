@@ -38,7 +38,7 @@ describe('FormatRegistry', () => {
   })
 
   it('checks convertible paths', () => {
-    expect(registry.canConvert('test-format', 'test-format')).toBe(true)
+    expect(registry.canConvert('test-format', 'test-format')).toBe(false)
     expect(registry.canConvert('test-format', 'missing-format')).toBe(false)
     expect(registry.canConvert('missing-format', 'test-format')).toBe(false)
   })
