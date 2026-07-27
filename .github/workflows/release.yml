@@ -97,7 +97,7 @@ jobs:
 
       - name: Generate checksums
         run: |
-          sha256sum * > checksums.txt
+          sha256sum *.msi *.dmg *.deb *.AppImage 2>/dev/null > checksums.txt || true
           cat checksums.txt
 
       - name: Create Release
