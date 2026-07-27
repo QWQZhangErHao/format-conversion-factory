@@ -1,0 +1,17 @@
+import { useState } from 'react'
+
+export default function App() {
+  const [count, setCount] = useState(0)
+  return (
+    <div style={{padding:40, fontFamily:'sans-serif'}}>
+      <h1 style={{fontSize:24, fontWeight:'bold'}}>格式转换工厂</h1>
+      <p style={{color:'#666', marginTop:8}}>如果看到这行字，React 渲染正常</p>
+      <button 
+        onClick={() => setCount(c => c + 1)}
+        style={{marginTop:16, padding:'8px 16px', background:'#007AFF', color:'white', border:'none', borderRadius:8, cursor:'pointer'}}
+      >
+        点击次数: {count}
+      </button>
+    </div>
+  )
+}

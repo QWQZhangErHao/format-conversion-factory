@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<root>
+<name>格式转换工厂</name>
+<version>0.1.0</version>
+<features>文档转换</features>
+<features>图片转换</features>
+<features>数据转换</features>
+<features>AI增强</features>
+<stats>
+<supportedFormats>15</supportedFormats>
+<activeUsers>1024</activeUsers>
+<uptime>99.9%</uptime>
+</stats>
+<enabled>true</enabled>
+</root>

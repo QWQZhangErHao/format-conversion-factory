@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "types": ["node", "vitest/globals"],
+    "baseUrl": ".",
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "vite.config.ts"],
+  "references": [
+    { "path": "../../packages/core" },
+    { "path": "../../packages/ui-shared" },
+    { "path": "../../packages/utils" }
+  ]
+}

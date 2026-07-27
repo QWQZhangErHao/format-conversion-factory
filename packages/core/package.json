@@ -1,0 +1,20 @@
+{
+  "name": "@convert/core",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "lint": "eslint . --ext ts --max-warnings 0",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.10",
+    "typescript": "^5.8.0",
+    "vitest": "^3.1.0"
+  }
+}

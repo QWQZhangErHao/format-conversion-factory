@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Strict file system permission — only app data directory","local":true,"windows":["main"],"permissions":["core:default","fs:allow-app-read","fs:allow-app-write"]}}

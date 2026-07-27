@@ -1,0 +1,54 @@
+[package]
+name = "format-conversion-factory"
+version = "0.2.0"
+description = "通用格式转换工厂 - 极速转换引擎"
+authors = ["Conversion Factory Team"]
+edition = "2021"
+
+[lib]
+name = "format_conversion_factory_lib"
+crate-type = ["lib", "cdylib", "staticlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "custom-protocol"] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+uuid = { version = "1", features = ["v4"] }
+chrono = { version = "0.4", features = ["serde"] }
+anyhow = "1"
+thiserror = "2"
+async-trait = "0.1"
+rayon = "1.10"                          # Parallel worker pool
+
+# Document conversion
+pulldown-cmark = "0.13"                  # Markdown → HTML
+ammonia = "4.0"                          # HTML sanitizer
+html2md = "0.2"                          # HTML → Markdown
+regex = "1"                              # Format stripping
+
+# Image conversion
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp"] }
+
+# Data conversion
+csv = "1.3"
+serde_yaml = "0.9"
+quick-xml = { version = "0.37", features = ["serialize"] }
+toml = "0.8"
+
+# Structured logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json", "chrono"] }
+tracing-appender = "0.2"
+
+# Progress reporting
+infer = "0.19"
+tokio = { version = "1", features = ["sync", "rt", "macros", "time"] }
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]

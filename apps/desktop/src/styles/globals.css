@@ -1,0 +1,160 @@
+@import "tailwindcss";
+
+@theme {
+  /* Apple Signature Liquid Glass Colors */
+  --color-glass-light: rgba(255, 255, 255, 0.65);
+  --color-glass-dark: rgba(28, 28, 30, 0.65);
+  --color-glass-border-light: rgba(255, 255, 255, 0.3);
+  --color-glass-border-dark: rgba(255, 255, 255, 0.08);
+
+  /* Apple Natural Spring Motion Presets */
+  --ease-apple-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* ── Design Tokens ── */
+:root {
+  /* SF Pro-equivalent font stack */
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+    'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+
+  /* Apple-style spacing scale */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Radius - Apple's signature rounded corners */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-2xl: 28px;
+}
+
+@layer base {
+  * {
+    @apply border-gray-200 dark:border-gray-800;
+  }
+
+  body {
+    @apply bg-gray-50 font-sans text-gray-900 antialiased dark:bg-gray-950 dark:text-gray-100;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Apple-style selection */
+  ::selection {
+    @apply bg-blue-500/20 text-blue-900 dark:bg-blue-400/20 dark:text-blue-100;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Liquid Glass (Apple-style frosted glass) */
+  .frosted-glass {
+    @apply backdrop-blur-xl;
+    background: rgba(255, 255, 255, 0.6);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.5) inset,
+      0 1px 3px rgba(0, 0, 0, 0.04),
+      0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .dark .frosted-glass {
+    background: rgba(30, 30, 30, 0.6);
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.08) inset,
+      0 1px 3px rgba(0, 0, 0, 0.3),
+      0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Apple-style card */
+  .apple-card {
+    @apply rounded-2xl bg-white/80 p-6 shadow-sm transition-all duration-300 dark:bg-gray-900/80;
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.03),
+      0 1px 3px rgba(0, 0, 0, 0.04),
+      0 4px 12px rgba(0, 0, 0, 0.04);
+  }
+
+  .apple-card:hover {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.03),
+      0 4px 12px rgba(0, 0, 0, 0.06),
+      0 12px 32px rgba(0, 0, 0, 0.06);
+    @apply -translate-y-0.5;
+  }
+
+  /* Drag-and-drop zone */
+  .drop-zone {
+    @apply border-2 border-dashed border-gray-300 transition-all duration-300
+           dark:border-gray-700;
+  }
+
+  .drop-zone.active {
+    @apply border-blue-500 bg-blue-50/50 dark:border-blue-400 dark:bg-blue-950/30;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer components {
+  /* Hardware-accelerated glass specular highlight (Apple metal/glass edge reflection) */
+  .glass-specular {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
+      0 8px 32px 0 rgba(0, 0, 0, 0.06);
+  }
+
+  .dark .glass-specular {
+    box-shadow:
+      inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
+      0 8px 32px 0 rgba(0, 0, 0, 0.3);
+  }
+
+  /* Spring Checkmark animation */
+  .checkmark-spring {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    animation: checkmark-draw 0.5s var(--ease-apple-spring) forwards;
+  }
+
+  @keyframes checkmark-draw {
+    to { stroke-dashoffset: 0; }
+  }
+
+  /* Pulse glow for completion state */
+  .pulse-glow {
+    animation: pulse-glow 1.5s ease-out;
+  }
+
+  @keyframes pulse-glow {
+    0% { box-shadow: 0 0 0 0 rgba(52, 199, 89, 0.5); }
+    100% { box-shadow: 0 0 0 20px rgba(52, 199, 89, 0); }
+  }
+}
+
+/* ── Tauri Custom Titlebar Drag Region ── */
+.titlebar {
+  -webkit-app-region: drag;
+  cursor: default;
+}
+
+.titlebar button,
+.titlebar input,
+.titlebar select {
+  -webkit-app-region: no-drag;
+}

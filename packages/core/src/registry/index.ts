@@ -1,0 +1,47 @@
+import type { FormatDescriptor, FormatId } from '../types'
+import { FormatCategory } from '../types'
+
+/**
+ * Format registry — the single source of truth for all supported formats.
+ * Follows the Registry pattern: centralized lookup with lazy plugin registration.
+ */
+class FormatRegistry {
+  private formats = new Map<FormatId, FormatDescriptor>()
+
+  register(format: FormatDescriptor): void {
+    if (this.formats.has(format.id)) {
+      console.warn(`[Registry] Format "${format.id}" is already registered. Overwriting.`)
+    }
+    this.formats.set(format.id, format)
+  }
+
+  registerMany(formats: FormatDescriptor[]): void {
+    for (const f of formats) this.register(f)
+  }
+
+  get(id: FormatId): FormatDescriptor | undefined {
+    return this.formats.get(id)
+  }
+
+  getAll(): FormatDescriptor[] {
+    return Array.from(this.formats.values())
+  }
+
+  getByCategory(category: FormatCategory): FormatDescriptor[] {
+    return this.getAll().filter((f) => f.category === category)
+  }
+
+  /** Check if a conversion path exists between two formats */
+  canConvert(source: FormatId, target: FormatId): boolean {
+    return this.formats.has(source) && this.formats.has(target)
+  }
+
+  /** Find all formats that can be converted from a given format */
+  getConvertibleTargets(source: FormatId): FormatDescriptor[] {
+    // TODO: Check registered plugins for actual conversion capability
+    return this.getAll().filter((f) => f.id !== source)
+  }
+}
+
+export const registry = new FormatRegistry()
+export type { FormatRegistry }
