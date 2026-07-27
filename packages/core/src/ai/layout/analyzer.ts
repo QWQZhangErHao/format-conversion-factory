@@ -87,7 +87,7 @@ export class LayoutAnalyzer {
    * Heuristic layout analysis — extracts structure from markup/document text
    * without requiring ML model download. Used as default.
    */
-  private heuristicAnalysis(content: string, format: string): DocumentLayout {
+  private heuristicAnalysis(content: string, _format: string): DocumentLayout {
     const lines = content.split('\n')
     const elements: LayoutElement[] = []
     let inList = false

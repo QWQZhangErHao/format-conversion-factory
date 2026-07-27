@@ -286,7 +286,7 @@ async function mockConversion(
   _options?: ConvertOptions,
   onProgress?: (progress: ConversionProgress) => void,
 ): Promise<ConversionResult> {
-  const totalSteps = 5
+  const _totalSteps = 5
   const startTime = performance.now()
 
   const emit = (status: ConversionStatus, progress: number, message: string) => {

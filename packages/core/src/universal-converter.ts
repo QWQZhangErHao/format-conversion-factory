@@ -7,7 +7,7 @@
  * 3. 从 IR 渲染为任意目标格式
  */
 
-import { convertInBrowser, isBrowserConvertible, getOutputExtension } from './browser-converter'
+import { convertInBrowser, isBrowserConvertible } from './browser-converter'
 
 // ── 格式检测 ──
 

@@ -107,7 +107,7 @@ async function mockConversion(
   _options?: { quality?: number; width?: number; height?: number },
   onProgress?: ProgressCallback,
 ): Promise<ConversionResult> {
-  const totalSteps = 5
+  const _totalSteps = 5
   const startTime = performance.now()
 
   const emit = (status: ConversionStatus, progress: number, message: string) => {

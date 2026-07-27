@@ -81,7 +81,7 @@ function yamlToJson(yaml: string): string {
   const lines = yaml.trim().split('\n')
   const result: Record<string, unknown> = {}
   let currentKey = ''
-  let currentIndent = 0
+  let _currentIndent = 0
 
   for (const line of lines) {
     const trimmed = line.trim()
@@ -104,7 +104,7 @@ function yamlToJson(yaml: string): string {
 
     if (value === '' || value === '|' || value === '>') {
       currentKey = key
-      currentIndent = line.search(/\S/)
+      _currentIndent = line.search(/\S/)
       result[key] = {}
       continue
     }

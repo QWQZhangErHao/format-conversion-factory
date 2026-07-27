@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { LayoutAnalyzer } from './analyzer'
 import { ONNXEngine } from '../onnx/runtime'
 import { LayoutElementType } from '../types'
@@ -163,7 +163,7 @@ describe('LayoutAnalyzer', () => {
     // When inList is true and previous element is LIST_ITEM, continuation stays LIST_ITEM
     const md = '- Item\ncontinuation\n\nNot a list'
     const layout = await analyzer.analyze(md, 'markdown')
-    const listItems = (layout.pages[0]?.elements ?? []).filter(
+    const _listItems = (layout.pages[0]?.elements ?? []).filter(
       (e) => e.type === LayoutElementType.LIST_ITEM,
     )
     // After grouping, list items are inside LIST.children

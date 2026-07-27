@@ -86,6 +86,7 @@ self.onmessage = async (event: MessageEvent) => {
   const worker = new AIWorkerImpl()
 
   try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = await (worker as any)[method](...args)
     self.postMessage({ id, result, error: null })
   } catch (err) {

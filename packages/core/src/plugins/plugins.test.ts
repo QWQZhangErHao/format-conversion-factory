@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { EngineType, ConversionStatus } from '../types'
 import { BasePlugin } from './index'
-import type { ConversionRequest, ConversionProgress, ConversionResult, ConversionPlugin } from '../types'
+import type { ConversionRequest } from '../types'
 
 class TestPlugin extends BasePlugin {
   id = 'test-plugin'
@@ -10,7 +10,7 @@ class TestPlugin extends BasePlugin {
   sourceFormats = ['json']
   targetFormats = ['csv']
   engine = EngineType.NATIVE
-  async execute(req, onProgress) {
+  async execute(req, _onProgress) {
     return { success: true, durationMs: 0 }
   }
 }
@@ -28,12 +28,12 @@ describe('BasePlugin', () => {
     const req = { sourceFormat:'json',targetFormat:'csv',inputPath:'/a.json' }
     expect(plugin.validate(req)).toBeNull()
   })
-  it('emitProgress calls onProgress correctly', () => {
+  it('emitProgress calls _onProgress correctly', () => {
     const plugin = new TestPlugin()
-    const onProgress = vi.fn()
-    plugin.emitProgress(onProgress, 0.5, 'halfway')
-    expect(onProgress).toHaveBeenCalledTimes(1)
-    const arg = onProgress.mock.calls[0][0]
+    const _onProgress = vi.fn()
+    plugin.emitProgress(_onProgress, 0.5, 'halfway')
+    expect(_onProgress).toHaveBeenCalledTimes(1)
+    const arg = _onProgress.mock.calls[0][0]
     expect(arg.progress).toBe(0.5)
     expect(arg.message).toBe('halfway')
     expect(arg.status).toBe(ConversionStatus.CONVERTING)
@@ -41,16 +41,16 @@ describe('BasePlugin', () => {
   })
   it('emitProgress uses custom conversionId', () => {
     const plugin = new TestPlugin()
-    const onProgress = vi.fn()
-    plugin.emitProgress(onProgress, 1.0, 'done', 'conv-001')
-    const arg = onProgress.mock.calls[0][0]
+    const _onProgress = vi.fn()
+    plugin.emitProgress(_onProgress, 1.0, 'done', 'conv-001')
+    const arg = _onProgress.mock.calls[0][0]
     expect(arg.conversionId).toBe('conv-001')
   })
   it('validate can be overridden', () => {
     class ValidatingPlugin extends BasePlugin {
       id='v';name='v';version='1';sourceFormats=['a'];targetFormats=['b'];engine=EngineType.NATIVE
       validate(req) { return req.inputPath ? null : 'no path' }
-      async execute(req,onProgress) { return { success:true, durationMs:0 } }
+      async execute(req,_onProgress) { return { success:true, durationMs:0 } }
     }
     const p = new ValidatingPlugin()
     expect(p.validate({} as ConversionRequest)).toBe('no path')

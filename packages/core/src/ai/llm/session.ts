@@ -79,6 +79,7 @@ export class LLMSession {
       this.webllmAvailable = !!webllm
       return this.webllmAvailable
     } catch {
+      // eslint-disable-next-line no-console
       console.info('[WebLLM] Package not available, using mock fallback')
       this.webllmAvailable = false
       return false
@@ -108,6 +109,7 @@ export class LLMSession {
         this.status = 'ready'
       } else {
         // Mock mode — no WebLLM available
+        // eslint-disable-next-line no-console
         console.info('[WebLLM] Not available, using mock fallback')
         this.status = 'ready'
       }

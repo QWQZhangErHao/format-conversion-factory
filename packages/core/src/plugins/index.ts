@@ -13,12 +13,12 @@ export abstract class BasePlugin implements ConversionPlugin {
   abstract targetFormats: string[]
   abstract engine: EngineType
 
-  validate?(request: ConversionRequest): string | null {
+  validate?(_request: ConversionRequest): string | null {
     return null
   }
 
   abstract execute(
-    request: ConversionRequest,
+    _request: ConversionRequest,
     onProgress: (progress: ConversionProgress) => void,
   ): Promise<ConversionResult>
 

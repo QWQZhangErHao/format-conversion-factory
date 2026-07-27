@@ -97,7 +97,7 @@ export class LLMConverter {
         tokensUsed: Math.ceil(output.length / 4),
         durationMs: performance.now() - startTime,
       }
-    } catch (error) {
+    } catch (_error) {
       return {
         success: false,
         output: '',

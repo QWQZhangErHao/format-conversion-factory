@@ -3,7 +3,7 @@ import { WorkerPool } from './index'
 
 describe('WorkerPool', () => {
   // Helper to create mock pool workers for testing
-  const makeWorker = (id: string, busy = false) => ({
+  const _makeWorker = (id: string, busy = false) => ({
     id,
     busy,
     terminate: vi.fn(),
