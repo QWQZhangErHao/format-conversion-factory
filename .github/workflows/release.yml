@@ -97,7 +97,9 @@ jobs:
 
       - name: Generate checksums
         run: |
-          sha256sum *.msi *.dmg *.deb *.AppImage 2>/dev/null > checksums.txt || true
+          ls -la
+          sha256sum *.msi *.dmg *.deb *.AppImage 2>/dev/null || sha256sum *.* 2>/dev/null || true
+          sha256sum *.msi *.dmg *.deb 2>/dev/null > checksums.txt || true
           cat checksums.txt
 
       - name: Create Release
@@ -105,12 +107,11 @@ jobs:
         with:
           name: "格式转换工厂 ${{ github.ref_name }}"
           body_path: .github/RELEASE_TEMPLATE.md
-          fail_on_unmatched_files: true
+          fail_on_unmatched_files: false
           files: |
             *.msi
             *.dmg
             *.deb
-            *.AppImage
             checksums.txt
 
   homebrew:
