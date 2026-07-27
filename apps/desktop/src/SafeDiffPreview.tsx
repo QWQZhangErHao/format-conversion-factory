@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { SPRING } from '../../packages/ui-shared/src'
+import { SPRING } from '../../../packages/ui-shared/src'
 
 interface SafeDiffPreviewProps {
   original: string

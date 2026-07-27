@@ -24,7 +24,7 @@ function detectFormatFromContent(content: string): DetectedFormat {
   if (t.startsWith('[')&&t.match(/^\[[\w.]+\]$/m)) return 'toml'
   if (t.match(/^(SELECT|INSERT|CREATE)\s/i)) return 'sql'
   if (t.includes('\t')&&t.split('\n')[0]?.includes('\t')) return 'tsv'
-  if (t.includes(',')&&t.split('\n')[0]?.split(',').length>1) return 'csv'
+  if (t.includes(',')&&(t.split('\n')[0]?.split(',')?.length??0)>1) return 'csv'
   if (t.match(/^#{1,6}\s/m)||t.match(/\[[^\]]+\]\([^)]+\)/)||t.match(/^[-*+]\s/m)) return 'markdown'
   return 'txt'
 }

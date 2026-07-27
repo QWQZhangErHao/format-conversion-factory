@@ -9,7 +9,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const tauriApiResolved = path.resolve(__dirname, 'node_modules/@tauri-apps/api')
 
 // https://v2.tauri.app/start/frontend/vite/
-export default defineConfig(async () => {
+const config = async () => {
   const host = process.env.TAURI_DEV_HOST
 
   return {
@@ -56,7 +56,8 @@ export default defineConfig(async () => {
       },
     },
   }
-})
+}
+export default config
 
 // Plugin to remove crossorigin from built HTML for Tauri compatibility
 function tauriCompatibilityPlugin() {

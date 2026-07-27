@@ -88,7 +88,7 @@ async function tryTauriConvert(
   let outputPath = ''
   try {
     const { invoke } = await import('@tauri-apps/api/core')
-    const { writeTextFile, readTextFile, removeFile } = await import('@tauri-apps/plugin-fs')
+    const { writeTextFile, readTextFile, remove: fsRemove } = await import('@tauri-apps/plugin-fs')
     const { tempDir } = await import('@tauri-apps/api/path')
 
     const tmpDir = await tempDir()
@@ -126,9 +126,9 @@ async function tryTauriConvert(
   } finally {
     // 清理临时文件
     try {
-      const { removeFile } = await import('@tauri-apps/plugin-fs')
-      if (inputPath) removeFile(inputPath)
-      if (outputPath) removeFile(outputPath)
+      const { remove: fsRemove } = await import('@tauri-apps/plugin-fs')
+      if (inputPath) fsRemove(inputPath)
+      if (outputPath) fsRemove(outputPath)
     } catch { /* 清理失败不影响主流程 */ }
   }
 }
