@@ -23,11 +23,11 @@ declare module '@mlc-ai/web-llm' {
     chat: {
       completions: {
         create(params: {
-          messages: Array<{ role: string; content: string }>
+          messages: { role: string; content: string }[]
           temperature?: number
           top_p?: number
           max_tokens?: number
-        }): Promise<{ choices: Array<{ message: { content: string } }> }>
+        }): Promise<{ choices: { message: { content: string } }[] }>
       }
     }
   }

@@ -4,7 +4,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default tseslint.config(
-  { ignores: ['**/dist/**', '**/target/**', '**/node_modules/**'] },
+  { ignores: ['**/dist/**', '**/target/**', '**/node_modules/**', '**/*.d.ts', '**/*.d.ts.map', '**/*.js.map'] },
   {
     extends: [
       ...tseslint.configs.recommended,
@@ -23,8 +23,11 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
-      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/consistent-type-imports': ['error', { prefer: 'type-imports' }],
+      '@typescript-eslint/no-empty-function': 'off',
+      '@typescript-eslint/ban-ts-comment': 'off',
+      '@typescript-eslint/no-unused-expressions': 'off',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },

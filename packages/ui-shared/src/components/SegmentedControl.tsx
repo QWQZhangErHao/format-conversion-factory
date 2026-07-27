@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, LayoutGroup } from 'framer-motion'
-import { SPRING, RADIUS } from '../styles/tokens'
+import { SPRING } from '../styles/tokens'
 
 export interface SegmentedOption {
   value: string

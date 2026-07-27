@@ -1,5 +1,5 @@
 import type { FormatDescriptor, FormatId } from '../types'
-import { FormatCategory } from '../types'
+import type { FormatCategory } from '../types'
 
 /**
  * Format registry — the single source of truth for all supported formats.

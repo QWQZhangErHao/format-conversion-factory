@@ -6,7 +6,7 @@ interface QueueStatusBarProps {
   completedCount: number
   eta: number
   queuePaused: boolean
-  files: Array<{ id: string; file: File; status: string }>
+  files: { id: string; file: File; status: string }[]
   onTogglePause: () => void
 }
 

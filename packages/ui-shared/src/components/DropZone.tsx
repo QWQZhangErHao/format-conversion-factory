@@ -1,6 +1,6 @@
 import React, { useState, useCallback, type ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { SPRING, RADIUS, COLORS } from '../styles/tokens'
+import { SPRING } from '../styles/tokens'
 
 export interface DropZoneProps {
   /** Called when files are dropped */

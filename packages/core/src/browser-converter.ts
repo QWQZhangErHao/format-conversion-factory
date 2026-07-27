@@ -202,7 +202,7 @@ function markdownToHtml(md: string): string {
 }
 
 function htmlToMarkdown(html: string): string {
-  let md = html
+  const md = html
     .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
     .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
     .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
@@ -226,7 +226,7 @@ function htmlToMarkdown(html: string): string {
 // ── Markdown → JSON (extract structure) ──
 
 function markdownToJson(md: string): string {
-  const result: { title?: string; headings: Array<{ level: number; text: string }>; paragraphs: string[]; lists: string[][] } = {
+  const result: { title?: string; headings: { level: number; text: string }[]; paragraphs: string[]; lists: string[][] } = {
     headings: [], paragraphs: [], lists: [],
   }
   let currentList: string[] = []

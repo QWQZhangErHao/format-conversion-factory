@@ -15,7 +15,7 @@ export interface PoolWorker {
 export class WorkerPool {
   private workers: PoolWorker[] = []
   private maxWorkers: number
-  private queue: Array<{ task: () => Promise<unknown>; resolve: (v: unknown) => void; reject: (e: Error) => void }> = []
+  private queue: { task: () => Promise<unknown>; resolve: (v: unknown) => void; reject: (e: Error) => void }[] = []
 
   constructor(maxWorkers = navigator.hardwareConcurrency || 4) {
     this.maxWorkers = Math.min(maxWorkers, 8)

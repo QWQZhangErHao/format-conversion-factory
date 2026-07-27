@@ -1,5 +1,5 @@
-import type { ConversionPlugin, ConversionRequest, ConversionResult, ConversionProgress } from '../types'
-import { EngineType, ConversionStatus } from '../types'
+import type { ConversionPlugin, ConversionRequest, ConversionResult, ConversionProgress , EngineType} from '../types'
+import { ConversionStatus } from '../types'
 
 /**
  * Base plugin — all conversion plugins extend this.

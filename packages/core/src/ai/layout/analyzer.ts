@@ -15,7 +15,7 @@
  * - Analysis runs as a pre-processing step in the pipeline
  */
 
-import { ONNXEngine } from '../onnx/runtime'
+import type { ONNXEngine } from '../onnx/runtime'
 import type {
   DocumentLayout,
   PageLayout,

@@ -1,6 +1,6 @@
 import React from 'react'
 import { motion, type HTMLMotionProps } from 'framer-motion'
-import { SPRING, RADIUS } from '../styles/tokens'
+import { SPRING } from '../styles/tokens'
 
 export interface AppleButtonProps extends HTMLMotionProps<'button'> {
   /** Visual variant */

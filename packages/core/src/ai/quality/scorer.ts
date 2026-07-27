@@ -15,7 +15,7 @@
  * - Falls back to SSIM when model is unavailable
  */
 
-import { ONNXEngine } from '../onnx/runtime'
+import type { ONNXEngine } from '../onnx/runtime'
 import type { QualityScore, QualityDetail } from '../types'
 import { ArtifactType } from '../types'
 
