@@ -114,7 +114,9 @@ pub struct TaskQueue {
 
 impl TaskQueue {
     pub fn new() -> Self {
-        let max = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
+        let cores = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(4);
+        // 为 Webview 渲染预留一个核心，防 UI 掉帧
+        let max = if cores <= 2 { 1 } else { cores - 1 };
         Self {
             max_concurrent: max.min(16),
             globally_paused: Arc::new(Mutex::new(false)),
@@ -136,10 +138,10 @@ impl TaskQueue {
     }
 
     /// Dequeue the next available task
+    /// Lock order: globally_paused → active → pending_heap → tasks
     pub fn dequeue(&self) -> Option<QueueTask> {
         if *lock(&self.globally_paused, "globally_paused") { return None; }
-        let active_len = lock(&self.active, "active").len();
-        if active_len >= self.max_concurrent { return None; }
+        if lock(&self.active, "active").len() >= self.max_concurrent { return None; }
 
         let mut heap = lock(&self.pending_heap, "pending_heap");
         let mut tasks = lock(&self.tasks, "tasks");
@@ -206,12 +208,16 @@ impl TaskQueue {
     }
 
     /// Resume a specific task
+    /// Lock order: paused → pending_heap → tasks (与 dequeue 一致防 ABBA 死锁)
     pub fn resume_task(&self, task_id: &str) -> bool {
         lock(&self.paused, "paused").retain(|id| id != task_id);
+        // 先取 pending_heap 再取 tasks，避免与 dequeue 的死锁
+        let _heap = lock(&self.pending_heap, "pending_heap");
         let mut tasks = lock(&self.tasks, "tasks");
         if let Some(task) = tasks.get_mut(task_id) {
             task.state = TaskState::Pending;
             let now = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap_or_default().as_nanos();
+            drop(_heap);
             lock(&self.pending_heap, "pending_heap").push(PriorityItem {
                 priority: task.priority, created_at: now, task_id: task_id.to_string(),
             });

@@ -14,6 +14,8 @@ struct ActiveConversion {
     #[allow(dead_code)]
     started_at: Instant,
     cancelled: bool,
+    /// Channel to send cancel signal to the running conversion task
+    cancel_tx: Option<tokio::sync::mpsc::UnboundedSender<()>>,
 }
 
 impl ConversionPipeline {
@@ -35,13 +37,17 @@ impl ConversionPipeline {
         let conv_id = request.id.clone();
         let mut prog = ConversionProgress::new(&conv_id);
 
-        // Track active conversion
+        // Track active conversion (恢复中毒的 mutex 而非 panic)
         {
-            let mut active = self.active_conversions.lock().expect("active_conversions mutex poisoned");
+            let mut active = self.active_conversions.lock().unwrap_or_else(|e| {
+                tracing::warn!("active_conversions mutex 中毒，已恢复");
+                e.into_inner()
+            });
             active.push(ActiveConversion {
                 id: conv_id.clone(),
                 started_at: Instant::now(),
                 cancelled: false,
+                cancel_tx: None,
             });
         }
 
@@ -137,14 +143,37 @@ impl ConversionPipeline {
             };
         }
 
-        // Step 4: Execute the conversion (with timeout + isolation via catch_unwind)
+        // Step 4: Execute the conversion (超时 + 取消双重保护)
         send_progress(&mut prog, ConversionStatus::Converting, 0.3, &format!("转换为 {}...", request.target_format), Some(StageType::Transform));
 
+        // 创建取消 signal：当 cancel() 被调用时，通知执行中的转换
+        let (cancel_tx, mut cancel_rx) = tokio::sync::mpsc::unbounded_channel::<()>();
+        {
+            if let Ok(mut active) = self.active_conversions.lock() {
+                // 为当前转换存储 cancel_tx，供 cancel() 调用时发送信号
+                if let Some(conv) = active.iter_mut().find(|a: &&mut ActiveConversion| a.id == conv_id) {
+                    conv.cancel_tx = Some(cancel_tx);
+                }
+            }
+        }
+
         let timeout_dur = std::time::Duration::from_secs(300);
-        let result = match tokio::time::timeout(timeout_dur, plugin.convert(&request, &progress_tx)).await {
-            Ok(Ok(path)) => Ok(path),
-            Ok(Err(e)) => Err(e),
-            Err(_) => Err("转换超时 (超过5分钟)".into()),
+        let plugin_fut = plugin.convert(&request, &progress_tx);
+
+        let result = tokio::select! {
+            // biased: 优先检查取消信号
+            biased;
+            _ = cancel_rx.recv() => {
+                tracing::warn!(%conv_id, "转换被取消 (hard kill)");
+                Err("转换已取消".into())
+            }
+            res = tokio::time::timeout(timeout_dur, plugin_fut) => {
+                match res {
+                    Ok(Ok(path)) => Ok(path),
+                    Ok(Err(e)) => Err(e),
+                    Err(_) => Err("转换超时 (超过5分钟)".into()),
+                }
+            }
         };
 
         // Step 5: Postprocess
@@ -152,9 +181,12 @@ impl ConversionPipeline {
 
         let duration_ms = start.elapsed().as_millis() as u64;
 
-        // Cleanup active tracking
+        // Cleanup active tracking (恢复中毒的 mutex 而非 panic)
         {
-            let mut active = self.active_conversions.lock().expect("active_conversions mutex poisoned (progress)");
+            let mut active = self.active_conversions.lock().unwrap_or_else(|e| {
+                tracing::warn!("active_conversions mutex 中毒(cleanup)，已恢复");
+                e.into_inner()
+            });
             active.retain(|a| a.id != conv_id);
         }
 
@@ -196,6 +228,10 @@ impl ConversionPipeline {
         if let Ok(mut active) = self.active_conversions.lock() {
             if let Some(conv) = active.iter_mut().find(|a| a.id == conversion_id) {
                 conv.cancelled = true;
+                // 发送硬取消信号到 tokio::select!，立即中断执行
+                if let Some(tx) = conv.cancel_tx.take() {
+                    let _ = tx.send(());
+                }
                 return true;
             }
         }

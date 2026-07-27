@@ -13,7 +13,7 @@ impl ConversionPlugin for DocumentPlugin {
     }
 
     fn source_formats(&self) -> Vec<&'static str> {
-        vec!["markdown", "html", "txt", "docx"]
+        vec!["markdown", "html", "txt"]
     }
 
     fn target_formats(&self) -> Vec<&'static str> {
@@ -26,7 +26,6 @@ impl ConversionPlugin for DocumentPlugin {
             | ("txt", "html") | ("txt", "markdown")
             | ("html", "txt") | ("markdown", "txt")
             | ("txt", "txt") => true,
-            ("docx", "txt") | ("docx", "markdown") | ("docx", "html") => true,
             _ => false,
         }
     }
@@ -50,19 +49,11 @@ impl ConversionPlugin for DocumentPlugin {
             ..prog.clone()
         });
 
-        // DOCX 文本提取由前端 JavaScript 完成（浏览器端 ZIP 解析+XML 提取）
-        // 如果前端有 fallback 传到 Rust 后端，走通用文本转换路径
-        let actual_content = if request.source_format == "docx" {
-            docx_extract_text(input_path)?  // 返回错误引导前端处理
-        } else {
-            content
-        };
-
         match (request.source_format.as_str(), request.target_format.as_str()) {
             ("markdown", "html") => {
-                let output = markdown_to_html(&actual_content);
+                let output = markdown_to_html(&content);
                 let output_path = request.output_path.clone()
-                    .unwrap_or_else(|| input_path.replace(".md", ".html").replace(".mdx", ".html"));
+                    .unwrap_or_else(|| replace_ext(input_path, "html"));
 
                 let _ = progress_tx.send(ConversionProgress {
                     status: ConversionStatus::Converting,
@@ -77,16 +68,16 @@ impl ConversionPlugin for DocumentPlugin {
                 Ok(output_path)
             }
             ("html", "markdown") => {
-                let output = html_to_markdown(&actual_content);
+                let output = html_to_markdown(&content);
                 let output_path = request.output_path.clone()
-                    .unwrap_or_else(|| input_path.replace(".html", ".md").replace(".htm", ".md"));
+                    .unwrap_or_else(|| replace_ext(input_path, "md"));
 
                 std::fs::write(&output_path, output)
                     .map_err(|e| format!("写入文件失败: {}", e))?;
                 Ok(output_path)
             }
-            ("txt", "html") | ("docx", "html") => {
-                let lines: Vec<&str> = actual_content.lines().collect();
+            ("txt", "html") => {
+                let lines: Vec<&str> = content.lines().collect();
                 let mut html = String::from("<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>Converted</title></head><body>\n");
                 for line in &lines {
                     let trimmed = line.trim();
@@ -105,19 +96,19 @@ impl ConversionPlugin for DocumentPlugin {
                     .map_err(|e| format!("写入文件失败: {}", e))?;
                 Ok(output_path)
             }
-            ("txt", "markdown") | ("txt", "txt") | ("docx", "markdown") | ("docx", "txt") => {
+            ("txt", "markdown") | ("txt", "txt") => {
                 let output_path = request.output_path.clone()
                     .unwrap_or_else(|| {
                         let ext = if request.target_format == "markdown" { "md" } else { "txt" };
                         let stem = std::path::Path::new(input_path).file_stem().and_then(|s| s.to_str()).unwrap_or("output");
                         format!("{}.{}", stem, ext)
                     });
-                std::fs::write(&output_path, &actual_content)
+                std::fs::write(&output_path, &content)
                     .map_err(|e| format!("写入文件失败: {}", e))?;
                 Ok(output_path)
             }
             ("html", "txt") | ("markdown", "txt") => {
-                let output = strip_to_plain_text(&actual_content, &request.source_format);
+                let output = strip_to_plain_text(&content, &request.source_format);
                 let output_path = request.output_path.clone()
                     .unwrap_or_else(|| {
                         let stem = std::path::Path::new(input_path).file_stem()
@@ -152,6 +143,17 @@ fn markdown_to_html(markdown: &str) -> String {
 fn html_to_markdown(html: &str) -> String {
     // html2md crate handles basic HTML→MD conversion
     html2md::parse_html(html)
+}
+
+/// Safe extension replacement using Path API (避免 str::replace 误改目录名)
+fn replace_ext(path: &str, new_ext: &str) -> String {
+    let p = std::path::Path::new(path);
+    let stem = p.file_stem().and_then(|s| s.to_str()).unwrap_or("output");
+    if let Some(parent) = p.parent() {
+        parent.join(format!("{}.{}", stem, new_ext)).to_string_lossy().into_owned()
+    } else {
+        format!("{}.{}", stem, new_ext)
+    }
 }
 
 /// Escape HTML special characters
@@ -215,14 +217,6 @@ fn strip_to_plain_text(content: &str, source_format: &str) -> String {
     }
 }
 
-/// Extract plain text from a DOCX file by reading word/document.xml
-fn docx_extract_text(_path: &str) -> Result<String, String> {
-    // DOCX extraction is handled in the frontend JavaScript.
-    // This function exists as a fallback for future Rust-side extraction
-    // when the `zip` crate is added as a dependency.
-    Err("DOCX 文本提取请使用前端浏览器端的 ZIP 解析器".into())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -247,8 +241,8 @@ mod tests {
         let plugin = DocumentPlugin;
         assert!(plugin.can_convert("markdown", "html"));
         assert!(plugin.can_convert("html", "markdown"));
-        assert!(plugin.can_convert("docx", "txt"));
-        assert!(plugin.can_convert("docx", "html"));
+        assert!(plugin.can_convert("txt", "html"));
         assert!(!plugin.can_convert("markdown", "pdf"));
+        assert!(!plugin.can_convert("docx", "txt")); // DOCX 由前端提取
     }
 }

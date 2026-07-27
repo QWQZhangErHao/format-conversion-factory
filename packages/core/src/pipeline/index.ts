@@ -7,7 +7,8 @@ import { ConversionStatus, StageType } from '../types'
  */
 export class ConversionPipeline {
   private plugins: ConversionPlugin[] = []
-  private abortController = new AbortController()
+  // 每个 execute() 调用创建新的 AbortController
+  private currentAbort: AbortController | null = null
 
   registerPlugin(plugin: ConversionPlugin): void {
     this.plugins.push(plugin)
@@ -24,13 +25,23 @@ export class ConversionPipeline {
     onProgress: (progress: ConversionProgress) => void,
   ): Promise<ConversionResult> {
     const startTime = performance.now()
+    const abort = new AbortController()
+    this.currentAbort = abort
 
     const emit = (status: ConversionStatus, progress: number, stage?: StageType, message?: string) => {
       onProgress({ conversionId: request.id ?? 'unknown', status, progress, stage, message })
     }
 
+    const checkCancelled = (): void => {
+      if (abort.signal.aborted) {
+        emit(ConversionStatus.CANCELLED, 0, undefined, '转换已取消')
+        throw new Error('转换已取消')
+      }
+    }
+
     try {
       // Phase 1: Preprocess
+      checkCancelled()
       emit(ConversionStatus.PREPROCESSING, 0.05, StageType.PREPROCESS, '准备输入文件...')
 
       const plugin = this.findPlugin(request.sourceFormat, request.targetFormat)
@@ -39,18 +50,22 @@ export class ConversionPipeline {
       }
 
       // Validate
+      checkCancelled()
       if (plugin.validate) {
         const error = plugin.validate(request)
         if (error) throw new Error(error)
       }
 
       // Phase 2: Parse
+      checkCancelled()
       emit(ConversionStatus.CONVERTING, 0.2, StageType.PARSE, `解析 ${request.sourceFormat}...`)
 
       // Phase 3-4: Transform & Serialize (handled by the plugin)
+      checkCancelled()
       emit(ConversionStatus.CONVERTING, 0.4, StageType.TRANSFORM, `转换为 ${request.targetFormat}...`)
 
       const result = await plugin.execute(request, (progress) => {
+        if (abort.signal.aborted) return // 取消后不再上报进度
         onProgress({
           ...progress,
           progress: 0.2 + progress.progress * 0.6,
@@ -58,6 +73,7 @@ export class ConversionPipeline {
       })
 
       // Phase 5: Postprocess
+      checkCancelled()
       emit(ConversionStatus.POSTPROCESSING, 0.95, StageType.POSTPROCESS, '完成处理...')
 
       const durationMs = performance.now() - startTime
@@ -69,16 +85,20 @@ export class ConversionPipeline {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown conversion error'
-      emit(ConversionStatus.FAILED, 0, undefined, errorMessage)
+      if (!abort.signal.aborted) {
+        emit(ConversionStatus.FAILED, 0, undefined, errorMessage)
+      }
       return {
         success: false,
         error: errorMessage,
         durationMs: performance.now() - startTime,
       }
+    } finally {
+      if (this.currentAbort === abort) this.currentAbort = null
     }
   }
 
   cancel(): void {
-    this.abortController.abort()
+    this.currentAbort?.abort()
   }
 }

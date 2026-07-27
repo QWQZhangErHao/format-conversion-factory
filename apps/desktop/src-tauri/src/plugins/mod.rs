@@ -45,7 +45,10 @@ impl PluginRegistry {
         let idx = self.plugins.len();
         for src in plugin.source_formats() {
             for tgt in plugin.target_formats() {
-                self.route_cache.insert((src.to_string(), tgt.to_string()), idx);
+                // 只缓存 can_convert 返回 true 的配对，避免绕过后面的校验
+                if plugin.can_convert(src, tgt) {
+                    self.route_cache.insert((src.to_string(), tgt.to_string()), idx);
+                }
             }
         }
         self.plugins.push(plugin);
@@ -55,7 +58,10 @@ impl PluginRegistry {
     pub fn find_plugin(&self, source: &str, target: &str) -> Option<&dyn ConversionPlugin> {
         // Direct route cache hit
         if let Some(&idx) = self.route_cache.get(&(source.to_string(), target.to_string())) {
-            return Some(self.plugins[idx].as_ref());
+            // 再次验证缓存项仍匹配（防御性检查，防止注册后修改）
+            if self.plugins[idx].can_convert(source, target) {
+                return Some(self.plugins[idx].as_ref());
+            }
         }
         // Fallback: linear scan (handles reverse lookups, cross-format)
         self.plugins.iter().find(|p| p.can_convert(source, target)).map(|p| p.as_ref())

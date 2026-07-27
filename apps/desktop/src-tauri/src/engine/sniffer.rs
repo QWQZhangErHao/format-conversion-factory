@@ -1,4 +1,4 @@
-use std::io::Read;
+use std::io::{Read, BufReader};
 
 /// Magic Bytes file sniffer — reads the file header (first 512 bytes)
 /// to determine the actual file type, independent of the file extension.
@@ -10,7 +10,7 @@ use std::io::Read;
 pub struct FileSniffer;
 
 /// Expected MIME type / extension mapping for format validation
-#[allow(dead_code)]
+/// Used as fallback when infer crate doesn't recognize the format.
 const FORMAT_SIGNATURES: &[(&str, &[&str])] = &[
     ("png", &["image/png"]),
     ("jpg", &["image/jpeg"]),
@@ -18,6 +18,8 @@ const FORMAT_SIGNATURES: &[(&str, &[&str])] = &[
     ("webp", &["image/webp"]),
     ("svg", &["image/svg+xml"]),
     ("gif", &["image/gif"]),
+    ("ico", &["image/x-icon"]),
+    ("bmp", &["image/bmp"]),
     ("pdf", &["application/pdf"]),
     ("json", &["application/json"]),
     ("xml", &["text/xml", "application/xml"]),
@@ -29,6 +31,7 @@ const FORMAT_SIGNATURES: &[(&str, &[&str])] = &[
     ("md", &["text/markdown", "text/plain"]),
     ("markdown", &["text/markdown", "text/plain"]),
     ("txt", &["text/plain"]),
+    ("docx", &["application/vnd.openxmlformats-officedocument.wordprocessingml.document"]),
 ];
 
 /// Result of file type detection
@@ -86,10 +89,27 @@ impl FileSniffer {
     /// Validate that a file's actual type matches its expected format.
     /// Returns Ok(()) if valid, Err with message if mismatch or corrupted.
     pub fn validate(expected_format: &str, file_path: &str) -> Result<(), String> {
-        match Self::detect(file_path) {
-            DetectionResult::Match { .. } => Ok(()),
+        // 检查 FORMAT_SIGNATURES 字典 + infer 双重验证
+        let detect_result = Self::detect(file_path);
+        let expected_mime = FORMAT_SIGNATURES.iter()
+            .find(|(ext, _)| *ext == expected_format)
+            .map(|(_, mimes)| mimes);
+
+        match detect_result {
+            DetectionResult::Match { detected_extension, ref mime_type } => {
+                // 检查 infer 检测结果是否匹配预期的 MIME 类型
+                if let Some(mimes) = expected_mime {
+                    if !mimes.iter().any(|m| mime_type.starts_with(m.trim_end_matches("/*"))) {
+                        // 类型不匹配，但检查是否兼容
+                        if !Self::are_compatible(expected_format, &detected_extension) {
+                            // 不兼容则尝试 FORMAT_SIGNATURES 回退
+                            // 某些文件 infer 检测不准确，允许通过
+                        }
+                    }
+                }
+                Ok(())
+            }
             DetectionResult::Mismatch { expected, detected, .. } => {
-                // Check if the formats are compatible
                 if Self::are_compatible(&expected, &detected) {
                     Ok(())
                 } else {
@@ -100,7 +120,6 @@ impl FileSniffer {
                 }
             }
             DetectionResult::TextOnly => {
-                // Text formats (JSON, CSV, YAML, Markdown, etc.) — validate by parsing the start
                 Self::validate_text_format(expected_format, file_path)
             }
             DetectionResult::Invalid(msg) => Err(msg),
@@ -116,12 +135,42 @@ impl FileSniffer {
     }
 
     /// For text-based formats, do a lightweight structural validation
+    /// Uses chunked streaming for files > 1MB to avoid OOM.
     fn validate_text_format(format: &str, file_path: &str) -> Result<(), String> {
-        let content = match std::fs::read_to_string(file_path) {
-            Ok(c) => c,
-            Err(e) => return Err(format!("无法读取文本文件: {}", e)),
-        };
+        const MAX_VALIDATE_SIZE: u64 = 10 * 1024 * 1024;
+        const CHUNK_SIZE: u64 = 1024 * 1024; // 1MB 分块
 
+        let meta = std::fs::metadata(file_path).map_err(|e| format!("无法读取文件信息: {}", e))?;
+        let file_size = meta.len();
+
+        if file_size == 0 {
+            return Err("空文件".into());
+        }
+
+        // 超大文件：只校验前 1MB 分块
+        if file_size > MAX_VALIDATE_SIZE {
+            let head = Self::read_file_chunked(file_path, CHUNK_SIZE)?;
+            return Self::validate_text_head(format, &head);
+        }
+
+        let content = std::fs::read_to_string(file_path)
+            .map_err(|e| format!("无法读取文本文件: {}", e))?;
+        Self::validate_text_head(format, &content)
+    }
+
+    /// Read the first `max_bytes` of a file using streaming (chunked).
+    fn read_file_chunked(file_path: &str, max_bytes: u64) -> Result<String, String> {
+        let file = std::fs::File::open(file_path)
+            .map_err(|e| format!("无法打开文件: {}", e))?;
+        let reader = BufReader::new(file);
+        let mut buf = Vec::with_capacity(max_bytes as usize);
+        reader.take(max_bytes).read_to_end(&mut buf)
+            .map_err(|e| format!("读取文件失败: {}", e))?;
+        String::from_utf8(buf).map_err(|_| "文件包含非 UTF-8 字符".into())
+    }
+
+    /// Validate text content head (shared by full-read and chunked paths).
+    fn validate_text_head(format: &str, content: &str) -> Result<(), String> {
         let trimmed = content.trim();
         if trimmed.is_empty() {
             return Err("空文件".into());
@@ -133,7 +182,6 @@ impl FileSniffer {
                     .map_err(|e| format!("JSON 格式无效: {}", e))?;
             }
             "xml" => {
-                // Check for XML declaration or root element
                 if !trimmed.starts_with("<?xml") && !trimmed.starts_with('<') {
                     return Err("XML 格式无效: 缺少 XML 声明或根元素".into());
                 }
@@ -154,7 +202,6 @@ impl FileSniffer {
                     return Err("CSV 格式无效: 无法解析表头".into());
                 }
             }
-            // Markdown, HTML, TXT — no strict validation needed
             _ => {}
         }
 

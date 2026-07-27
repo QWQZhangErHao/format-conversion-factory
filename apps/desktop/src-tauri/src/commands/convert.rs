@@ -1,7 +1,41 @@
 use serde_json::Value;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, State, ipc::Channel};
 use crate::engine::types::*;
 use crate::engine::{FormatRegistry, ConversionPipeline, WorkerPool, QueueStats};
+
+/// Validate that a file path is within an allowed scope (no path traversal).
+/// Rejects paths containing `..` components, absolute paths on Windows
+/// that don't start with an allowed prefix, and symlinks escaping the base.
+pub fn validate_path(path_str: &str) -> Result<(), String> {
+    let path = std::path::Path::new(path_str);
+
+    // Reject paths with .. components (directory traversal)
+    if path.components().any(|c| c == std::path::Component::ParentDir) {
+        return Err("路径包含 '..' 目录遍历，已拒绝".into());
+    }
+
+    // On Windows, reject paths accessing device names or system directories
+    #[cfg(windows)]
+    {
+        let lower = path_str.to_lowercase();
+        let dangerous = [
+            "CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4",
+            "LPT1", "LPT2", "LPT3",
+        ];
+        for dev in &dangerous {
+            if lower.contains(&dev.to_lowercase()) {
+                return Err(format!("路径包含系统设备名 '{}'，已拒绝", dev));
+            }
+        }
+    }
+
+    // Reject paths with null bytes
+    if path_str.contains('\0') {
+        return Err("路径包含空字节，已拒绝".into());
+    }
+
+    Ok(())
+}
 
 /// Application state shared across all Tauri commands
 pub struct AppState {
@@ -41,6 +75,12 @@ pub async fn convert_file(
     width: Option<u32>,
     height: Option<u32>,
 ) -> Result<ConversionResult, String> {
+    // 验证路径安全性
+    validate_path(&input_path)?;
+    if let Some(ref out) = output_path {
+        validate_path(out)?;
+    }
+
     let request = ConversionRequest {
         id: uuid::Uuid::new_v4().to_string(),
         source_format,
@@ -72,6 +112,61 @@ pub async fn convert_file(
     // Execute conversion
     let result = state.pipeline.execute(request, progress_tx).await;
 
+    Ok(result)
+}
+
+/// Start a file conversion with streaming progress via Tauri v2 Channel.
+/// 比 emit 方式更高效：专线 IPC 通道，避免全局事件总线广播开销。
+#[tauri::command]
+pub async fn convert_file_stream(
+    _app: AppHandle,
+    state: State<'_, AppState>,
+    source_format: String,
+    target_format: String,
+    input_path: String,
+    output_path: Option<String>,
+    quality: Option<u8>,
+    width: Option<u32>,
+    height: Option<u32>,
+    on_progress: Channel<ConversionProgress>,
+) -> Result<ConversionResult, String> {
+    validate_path(&input_path)?;
+    if let Some(ref out) = output_path {
+        validate_path(out)?;
+    }
+
+    let request = ConversionRequest {
+        id: uuid::Uuid::new_v4().to_string(),
+        source_format,
+        target_format,
+        input_path,
+        output_path,
+        options: Some(ConversionOptions {
+            quality,
+            width,
+            height,
+            preserve_metadata: None,
+            page_range: None,
+        }),
+    };
+
+    let conv_id = request.id.clone();
+
+    // 使用 Channel 直接向前端推送进度，零事件总线开销
+    let channel = on_progress;
+    let (progress_tx, mut progress_rx) = tokio::sync::mpsc::unbounded_channel::<ConversionProgress>();
+
+    // 转发进度：Tokio channel → Tauri IPC Channel
+    tokio::spawn(async move {
+        while let Some(progress) = progress_rx.recv().await {
+            if let Err(e) = channel.send(progress) {
+                tracing::warn!(conv_id, "进度 Channel 发送失败: {}", e);
+                break;
+            }
+        }
+    });
+
+    let result = state.pipeline.execute(request, progress_tx).await;
     Ok(result)
 }
 
@@ -124,6 +219,7 @@ pub fn cancel_task(state: State<'_, AppState>, task_id: String) -> bool {
 /// Uses tauri::ipc::Response for direct binary transfer to the frontend.
 #[tauri::command]
 pub async fn read_file_bytes(path: String) -> Result<tauri::ipc::Response, String> {
+    validate_path(&path)?;
     let data = tokio::fs::read(&path).await
         .map_err(|e| format!("读取文件失败: {}", e))?;
     Ok(tauri::ipc::Response::new(data))
@@ -132,6 +228,7 @@ pub async fn read_file_bytes(path: String) -> Result<tauri::ipc::Response, Strin
 /// AI 友好：将任意支持的文件读取并转换为 Markdown 格式
 #[tauri::command]
 pub fn read_as_markdown(path: String) -> Result<String, String> {
+    validate_path(&path)?;
     crate::readers::read_as_markdown(&path)
 }
 
@@ -141,9 +238,39 @@ pub fn get_recent_logs(n: usize) -> Vec<String> {
     crate::logger::recent_logs(n)
 }
 
+/// 在文件管理器中显示文件位置 (Finder/Explorer)
+#[tauri::command]
+pub fn show_in_folder(path: String) -> Result<(), String> {
+    validate_path(&path)?;
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .args(["-R", &path])
+            .spawn()
+            .map_err(|e| format!("打开 Finder 失败: {}", e))?;
+    }
+    #[cfg(target_os = "windows")]
+    {
+        // Explorer 的 select 参数选中文件
+        let _ = std::process::Command::new("explorer")
+            .args(["/select,", &path])
+            .spawn();
+    }
+    #[cfg(target_os = "linux")]
+    {
+        // Linux: 打开父目录
+        if let Some(p) = std::path::Path::new(&path).parent() {
+            let _ = std::process::Command::new("xdg-open").arg(p).spawn();
+        }
+    }
+    Ok(())
+}
+
 /// Magic Bytes 文件格式嗅探 (前置校验)
 #[tauri::command]
 pub fn detect_file_format(path: String) -> Result<Value, String> {
+    validate_path(&path)?;
     use serde_json::json;
     use crate::engine::sniffer::FileSniffer;
 

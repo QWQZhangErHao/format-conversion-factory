@@ -13,18 +13,23 @@ import { ConversionStatus } from './types'
 // ── Tauri IPC Layer ──
 
 let tauriAvailable: boolean | null = null
+let tauriPromise: Promise<boolean> | null = null
 
 async function checkTauri(): Promise<boolean> {
   if (tauriAvailable !== null) return tauriAvailable
-  try {
-    // @ts-ignore - @tauri-apps/api is optional, may not be installed in all environments
-    const { invoke } = await import('@tauri-apps/api/core')
-    await invoke('greet', { name: 'test' })
-    tauriAvailable = true
-  } catch {
-    tauriAvailable = false
-  }
-  return tauriAvailable
+  if (tauriPromise) return tauriPromise
+  tauriPromise = (async () => {
+    try {
+      // @ts-ignore - @tauri-apps/api is optional, may not be installed in all environments
+      const { invoke } = await import('@tauri-apps/api/core')
+      await invoke('greet', { name: 'test' })
+      tauriAvailable = true
+    } catch {
+      tauriAvailable = false
+    }
+    return tauriAvailable
+  })()
+  return tauriPromise
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

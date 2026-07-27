@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react'
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   AppleButton,
@@ -379,6 +379,23 @@ function App() {
   const [queuePaused, setQueuePaused] = useState(false)
   const queuePausedRef = useRef(false)
   const [eta, setEta] = useState(0)
+
+  // 空格键预览：选中的已完成文件切换 DiffPreview
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space' && e.target === document.body) {
+        const doneFiles = files.filter(f => f.status === 'done')
+        if (doneFiles.length === 0) return
+        // 切换最新完成的文件的 diff 视图
+        const lastDone = doneFiles[doneFiles.length - 1]!
+        setDiffFile(diffFile === lastDone.id ? null : lastDone.id)
+        setExpandedFile(lastDone.id)
+        e.preventDefault()
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [files, diffFile])
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const batchConverting = useRef(false)
   const conversionStartTime = useRef(0)
@@ -538,6 +555,7 @@ function App() {
             {/* ── File List ── */}
             <ConversionErrorBoundary fallbackTitle="文件列表渲染异常" silent>
             <section className="pt-6">
+              {/* 超过 12 个文件时限制高度并启用滚动 + CSS containment 保性能 */}
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-[15px] font-semibold text-gray-700 dark:text-gray-300">
                   已添加 {files.length} 个文件
@@ -564,7 +582,7 @@ function App() {
                   <button onClick={clearAll} className="text-[13px] text-[#007AFF] dark:text-[#0A84FF] hover:opacity-70 transition-opacity">清除全部</button>
                 </div>
               </div>
-              <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 gap-2' : 'space-y-2'}>
+              <div className={`${viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 gap-2' : 'space-y-2'} ${files.length > 12 ? 'max-h-[600px] overflow-y-auto [contain:content]' : ''}`}>
                 <AnimatePresence>
                   {files.map((cf, i) => (
                     <motion.div key={cf.id} layout="position" initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
@@ -642,6 +660,16 @@ function App() {
                                     className="flex-1 rounded-[10px] bg-[#007AFF] py-2.5 text-[14px] font-medium text-white hover:brightness-[1.15] active:brightness-[0.85] transition-all dark:bg-[#0A84FF]"
                                   >
                                     下载转换后的文件
+                                  </button>
+                                  <button
+                                    onClick={async (e) => { e.stopPropagation(); try { const { invoke } = await import('@tauri-apps/api/core'); await invoke('show_in_folder', { path: cf.file.name }) } catch { logWarn('无法在文件管理器中显示') } }}
+                                    className="rounded-[10px] px-3 py-2.5 text-[13px] font-medium bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+                                    title="在文件管理器中显示"
+                                  >
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="inline-block mr-1">
+                                      <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" />
+                                    </svg>
+                                    {navigator.userAgent.includes('Mac') ? 'Finder' : '显示位置'}
                                   </button>
                                   <button
                                     onClick={(e) => { e.stopPropagation(); logInfo(`对比视图: ${diffFile === cf.id ? '关闭' : '打开'}`); setDiffFile(diffFile === cf.id ? null : cf.id) }}

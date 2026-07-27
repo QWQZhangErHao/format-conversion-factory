@@ -33,7 +33,13 @@ class FormatRegistry {
 
   /** Check if a conversion path exists between two formats */
   canConvert(source: FormatId, target: FormatId): boolean {
-    return this.formats.has(source) && this.formats.has(target)
+    // 实际转换能力由 browser-converter.ts 的 CONVERTERS 和 Rust 后端插件决定
+    // 此方法仅检查格式是否已被注册，不保证有对应的转换器
+    const bothExist = this.formats.has(source) && this.formats.has(target)
+    if (!bothExist) return false
+    // 同一格式不需要转换
+    if (source === target) return false
+    return true
   }
 
   /** Find all formats that can be converted from a given format */

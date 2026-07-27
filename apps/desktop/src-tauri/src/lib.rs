@@ -8,6 +8,9 @@ mod plugins;
 mod commands;
 mod readers;
 mod logger;
+mod utils;
+#[cfg(test)]
+mod types_export;
 
 use commands::AppState;
 use engine::{FormatRegistry, ConversionPipeline, WorkerPool};
@@ -25,6 +28,9 @@ pub fn run() {
     // Initialize the logging system
     logger::init();
     tracing::info!("格式转换工厂 v0.2 启动中...");
+
+    // 启动时清理 24 小时前的残留临时文件
+    utils::cleanup::cleanup_stale_temp_files();
 
     // Initialize the plugin registry with default conversion plugins
     let plugin_registry = Arc::new(PluginRegistry::default());
@@ -53,6 +59,7 @@ pub fn run() {
             commands::convert::get_supported_formats,
             commands::convert::get_formats_by_category,
             commands::convert::convert_file,
+            commands::convert::convert_file_stream,
             commands::convert::cancel_conversion,
             commands::convert::get_worker_stats,
             commands::convert::pause_queue,
@@ -64,6 +71,7 @@ pub fn run() {
             commands::convert::read_as_markdown,
             commands::convert::get_recent_logs,
             commands::convert::detect_file_format,
+            commands::convert::show_in_folder,
         ])
         .setup(|_app| {
             // DevTools disabled per user request

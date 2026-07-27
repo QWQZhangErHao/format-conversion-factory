@@ -74,10 +74,10 @@ impl ConversionPlugin for ImagePlugin {
             ..prog.clone()
         });
 
-        // Apply resize if requested
+        // Apply resize if requested (钳位宽高 ≥ 1)
         let img = if let Some(ref opts) = request.options {
-            let w = opts.width.unwrap_or(img.width());
-            let h = opts.height.unwrap_or(img.height());
+            let w = opts.width.filter(|&v| v > 0).unwrap_or(img.width());
+            let h = opts.height.filter(|&v| v > 0).unwrap_or(img.height());
             if w != img.width() || h != img.height() {
                 img.resize_exact(w, h, image::imageops::FilterType::Lanczos3)
             } else {
@@ -121,11 +121,14 @@ impl ConversionPlugin for ImagePlugin {
                     .map_err(|e| format!("PNG 编码失败: {}", e))?;
             }
             ImageFormat::Jpeg => {
-                let encoder = JpegEncoder::new_with_quality(&mut writer, quality);
+                let q = quality.clamp(1, 100);
+                let encoder = JpegEncoder::new_with_quality(&mut writer, q);
                 img.write_with_encoder(encoder)
                     .map_err(|e| format!("JPEG 编码失败: {}", e))?;
             }
             ImageFormat::WebP => {
+                // image 0.25 只提供无损 WebPEncoder，有损编码需升级 image 版本
+                // 目前统一使用无损编码以保持兼容
                 let encoder = WebPEncoder::new_lossless(&mut writer);
                 img.write_with_encoder(encoder)
                     .map_err(|e| format!("WebP 编码失败: {}", e))?;

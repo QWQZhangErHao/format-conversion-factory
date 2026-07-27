@@ -11,3 +11,7 @@ target/
 Thumbs.db
 coverage/
 .vite/
+*.bak
+*.minimal
+test-files/
+!test-files/.gitkeep

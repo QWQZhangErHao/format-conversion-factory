@@ -172,7 +172,7 @@ export function DiffPreview({ original, converted, sourceFormat, targetFormat, v
                     <span className="text-[11px] text-gray-400">原始内容</span>
                   </div>
                 </div>
-                <pre className="overflow-auto p-4 text-[12px] leading-relaxed font-mono text-gray-700 dark:text-gray-300 max-h-[300px] scrollbar-thin"
+                <pre className="overflow-auto p-4 text-[12px] leading-relaxed font-mono text-gray-700 dark:text-gray-300 max-h-[300px] scrollbar-thin whitespace-pre-wrap"
                   dangerouslySetInnerHTML={{ __html: highlightSyntax(original, sourceFormat) }}
                 />
               </div>

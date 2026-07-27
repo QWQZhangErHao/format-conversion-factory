@@ -1,0 +1,167 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+env:
+  CARGO_TERM_COLOR: always
+  PNPM_VERSION: 11.17.0
+  TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+  TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PASSWORD }}
+
+jobs:
+  matrix:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+            ext: .msi
+            format: msi
+          - target: x86_64-apple-darwin
+            os: macos-latest
+            ext: .dmg
+            format: dmg
+          - target: aarch64-apple-darwin
+            os: macos-latest
+            ext: .dmg
+            format: dmg
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            ext: .deb
+            format: deb
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Linux deps
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+
+      - name: Cache Rust
+        uses: Swatinem/rust-cache@v2
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build
+        run: pnpm build
+
+      - name: Bundle (${{ matrix.format }})
+        run: cd apps/desktop && pnpm tauri build --bundles ${{ matrix.format }}
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: format-conversion-factory-${{ matrix.target }}
+          path: apps/desktop/src-tauri/target/release/bundle/${{ matrix.format }}/*${{ matrix.ext }}
+          if-no-files-found: error
+
+  release:
+    name: Create Release
+    needs: [matrix]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: format-conversion-factory-*
+          merge-multiple: true
+
+      - name: Generate checksums
+        run: |
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "格式转换工厂 ${{ github.ref_name }}"
+          body_path: .github/RELEASE_TEMPLATE.md
+          fail_on_unmatched_files: true
+          files: |
+            *.msi
+            *.dmg
+            *.deb
+            *.AppImage
+            checksums.txt
+
+  homebrew:
+    name: Update Homebrew Tap
+    needs: [release]
+    runs-on: ubuntu-latest
+    if: github.repository_owner == 'your-org'  # TODO: 替换为你的 GitHub org
+
+    steps:
+      - name: Checkout tap repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-tap
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: tap
+
+      - name: Update formula
+        env:
+          VERSION: ${{ github.ref_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          # 下载最新 macOS Intel 构建的 checksum
+          curl -sL "https://github.com/$REPO/releases/download/$VERSION/checksums.txt" -o checksums.txt
+          INTEL_SHA=$(grep "x86_64-apple-darwin" checksums.txt | cut -d' ' -f1)
+          ARM_SHA=$(grep "aarch64-apple-darwin" checksums.txt | cut -d' ' -f1)
+
+          # 更新 cask formula
+          cat > tap/Casks/format-conversion-factory.rb << EOF
+          cask "format-conversion-factory" do
+            version "$VERSION"
+            sha256 intel: "$INTEL_SHA", arm: "$ARM_SHA"
+
+            url "https://github.com/$REPO/releases/download/#{version}/format-conversion-factory-#{version}.dmg"
+            name "格式转换工厂"
+            desc "Universal format conversion tool with Apple-style UI"
+            homepage "https://github.com/$REPO"
+
+            app "格式转换工厂.app"
+
+            zap trash: [
+              "~/Library/Application Support/com.conversion-factory.desktop",
+              "~/Library/Caches/com.conversion-factory.desktop",
+            ]
+          end
+          EOF
+
+      - name: Commit and push
+        run: |
+          cd tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --quiet || git commit -m "chore: update to ${{ github.ref_name }}"
+          git push
