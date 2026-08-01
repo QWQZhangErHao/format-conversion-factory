@@ -47,12 +47,13 @@ function getWorker(): Worker {
   return worker
 }
 
-async function rpcCall(method: keyof AIWorkerAPI, ...args: unknown[]): Promise<unknown> {
+async function rpcCall<T = unknown>(method: keyof AIWorkerAPI, ...args: unknown[]): Promise<T> {
   const id = ++requestId
   const w = getWorker()
 
-  return new Promise((resolve, reject) => {
-    pending.set(id, { resolve, reject })
+  return new Promise<T>((resolve, reject) => {
+    // Worker 消息的 result 是 unknown，运行时由调用方按 T 收窄
+    pending.set(id, { resolve: resolve as RpcCallback, reject })
     w.postMessage({ id, method, args })
 
     // 30 秒超时保护
@@ -75,11 +76,11 @@ export const aiClient: AIWorkerAPI = {
   },
 
   async llmConvert(sourceFormat, targetFormat, content) {
-    return rpcCall('llmConvert', sourceFormat, targetFormat, content)
+    return rpcCall<{ output: string; success: boolean }>('llmConvert', sourceFormat, targetFormat, content)
   },
 
   async healthCheck() {
-    return rpcCall('healthCheck')
+    return rpcCall<{ status: string; memory: number }>('healthCheck')
   },
 }
 

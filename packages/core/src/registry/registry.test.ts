@@ -76,7 +76,7 @@ describe('FormatRegistry', () => {
     registry.register(overwrite)
 
     expect(warnSpy).toHaveBeenCalled()
-    const warnMsg = warnSpy.mock.calls[0][0] as string
+    const warnMsg = warnSpy.mock.calls[0]![0] as string
     expect(warnMsg).toContain('already registered')
     expect(registry.get('test-format')?.name).toBe('Overwritten Format')
 

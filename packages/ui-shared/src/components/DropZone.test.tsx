@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { DropZone } from './DropZone'
 
@@ -16,7 +16,7 @@ function createMockFileList(files: File[]): FileList {
         next: () => (i < files.length ? { value: files[i++], done: false } : { done: true } as IteratorResult<File>),
       }
     },
-  } as FileList
+  } as unknown as FileList
 }
 
 describe('DropZone', () => {

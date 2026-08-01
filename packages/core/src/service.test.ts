@@ -74,7 +74,7 @@ describe('ConversionService (Mock)', () => {
     const onProgress = vi.fn()
     await startConversion('json', 'csv', '/test/input.json', undefined, undefined, onProgress)
 
-    const firstCall = onProgress.mock.calls[0][0] as Record<string, unknown>
+    const firstCall = onProgress.mock.calls[0]![0] as Record<string, unknown>
     expect(firstCall).toHaveProperty('conversionId')
     expect(firstCall).toHaveProperty('status')
     expect(firstCall).toHaveProperty('progress')
@@ -85,7 +85,7 @@ describe('ConversionService (Mock)', () => {
     expect(firstCall.progress).toBeLessThanOrEqual(1)
 
     const lastCall =
-      onProgress.mock.calls[onProgress.mock.calls.length - 1][0] as Record<string, unknown>
+      onProgress.mock.calls[onProgress.mock.calls.length - 1]![0] as Record<string, unknown>
     expect(lastCall.status).toBe(ConversionStatus.COMPLETED)
     expect(lastCall.progress).toBe(1)
   })
@@ -112,7 +112,7 @@ describe('ConversionService (Mock)', () => {
   it('FormatInfo shape is correct in mock mode', async () => {
     const { getSupportedFormats } = await import('./service')
     const formats = await getSupportedFormats()
-    const format = formats[0]
+    const format = formats[0]!
 
     expect(format).toHaveProperty('id')
     expect(format).toHaveProperty('name')

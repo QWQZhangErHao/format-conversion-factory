@@ -51,6 +51,9 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: TypeCheck
+        run: pnpm typecheck
+
       - name: Test
         run: pnpm test
 

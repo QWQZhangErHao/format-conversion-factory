@@ -8,6 +8,8 @@
  * Service tests manage their own Tauri mocks via vi.hoisted() + vi.mock().
  */
 
+import { vi } from 'vitest'
+
 // ── ONNX Runtime Web Mock ──
 
 vi.mock('onnxruntime-web', () => {

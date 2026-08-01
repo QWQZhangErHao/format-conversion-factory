@@ -74,7 +74,7 @@ describe('ONNXEngine', () => {
   it('loadModel fails and sets status to error', async () => {
     const engine = new ONNXEngine()
     const { InferenceSession } = await import('onnxruntime-web')
-    InferenceSession.create.mockRejectedValueOnce(new Error('Load failed'))
+    vi.mocked(InferenceSession.create).mockRejectedValueOnce(new Error('Load failed'))
     const desc = AI_MODELS['layoutlmv3-tiny']!.descriptor
     await expect(engine.loadModel('fail-model', desc, new ArrayBuffer(8))).rejects.toThrow('Load failed')
     expect(engine.getStatus('fail-model')).toBe('error')
