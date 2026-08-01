@@ -17,3 +17,7 @@ coverage/
 *.js.map
 test-files/
 !test-files/.gitkeep
+# Playwright e2e 产物
+playwright-report/
+test-results/
+blob-report/
