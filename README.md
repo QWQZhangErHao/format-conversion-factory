@@ -75,6 +75,7 @@ Download the latest release from the [Releases page](https://github.com/QWQZhang
 # Prerequisites / 前置条件
 # Install Rust: https://rustup.rs
 # Install Node.js 20+
+# Install pnpm: corepack enable (版本由 packageManager 锁定为 11.17.0)
 
 git clone https://github.com/QWQZhangErHao/format-conversion-factory.git
 cd format-conversion-factory
@@ -89,6 +90,14 @@ pnpm tauri dev
 pnpm tauri build
 ```
 
+> **Linux 系统依赖** (Ubuntu/Debian) / Linux system dependencies:
+> ```bash
+> sudo apt-get update
+> sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+> ```
+>
+> **Windows 前置** / Windows prerequisites: [MSVC Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (C++ workload) + WebView2 Runtime (Win10/11 自带)。
+
 ---
 
 ## Architecture · 架构
@@ -96,21 +105,16 @@ pnpm tauri build
 ```
 format-conversion-factory/
 ├── apps/
-│   ├── desktop/              # Tauri desktop app / 桌面应用
-│   │   ├── src-tauri/        # Rust backend / Rust 后端
-│   │   │   ├── src/          # Rust source / Rust 源码
-│   │   │   │   ├── converter/  # Conversion engines / 转换引擎
-│   │   │   │   ├── ffmpeg/     # FFmpeg integration / FFmpeg 集成
-│   │   │   │   └── utils/      # Utilities / 工具函数
-│   │   │   └── icons/        # App icons / 应用图标
-│   │   └── src/              # React frontend / React 前端
-│   │       ├── components/   # UI components / UI 组件
-│   │       ├── hooks/        # Custom hooks / 自定义 Hooks
-│   │       └── lib/          # Utilities / 工具库
-│   └── docs/                 # Documentation / 文档
+│   └── desktop/               # Tauri desktop app / 桌面应用
+│       ├── src-tauri/         # Rust backend / Rust 后端
+│       │   ├── src/           # api / commands / engine / plugins / readers / utils
+│       │   └── icons/         # App icons / 应用图标
+│       └── src/               # React frontend / React 前端(App.tsx 及组件)
 ├── packages/
-│   └── shared/               # Shared types / 共享类型
-└── turbo.json                # Turborepo config
+│   ├── core/                  # Conversion core / 转换核心(AI、pipeline、插件、注册表)
+│   ├── ui-shared/             # Shared UI components / 共享 UI 组件
+│   └── utils/                 # Shared utilities / 共享工具函数
+└── turbo.json                 # Turborepo config
 ```
 
 ### Tech Stack · 技术栈
@@ -119,7 +123,7 @@ format-conversion-factory/
 |-----------|-----------------|
 | **Desktop Shell** | Tauri v2 (Rust) |
 | **Frontend** | React 19, TypeScript, Vite |
-| **Conversion** | Rust native converters + FFmpeg |
+| **Conversion** | Rust native engines + WebAssembly converters + ONNX/WebLLM AI |
 | **Monorepo** | Turborepo, pnpm workspace |
 | **CI/CD** | GitHub Actions |
 
@@ -145,7 +149,7 @@ pnpm tauri build
 
 - [Rust](https://rustup.rs) 1.85+
 - [Node.js](https://nodejs.org) 20+
-- [pnpm](https://pnpm.io) 9+
+- [pnpm](https://pnpm.io) 11.17.0(推荐 `corepack enable`,版本自动锁定)
 - System dependencies for Tauri v2 (see [Tauri docs](https://v2.tauri.app/start/prerequisites/))
 
 ---
